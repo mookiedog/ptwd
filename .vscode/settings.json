@@ -1,0 +1,43 @@
+{
+    // The number of parallel build jobs.
+    // "Use zero to automatically detect the number of CPUs." --> doesn't work for me though
+    // Setting this to 1 will disable build parallelism.
+    "cmake.parallelJobs": 10,
+
+    /* Pick a generator */
+    /*"cmake.generator": "Unix Makefiles",*/
+    "cmake.generator": "Ninja",
+
+    /* This option adds extra args to the cmake "configure" command. */
+    "cmake.configureArgs": [
+      /* Tell cmake where to find our toolchain file */
+      "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/host.cmake",
+
+      /* Tell CMake to display some debug info about what it is doing */
+      /*"--debug-output",*/
+
+      /* Tell CMake to display so much debug info that you will be sorry you asked */
+      /*"--trace"*/
+
+      /* Run the software from SRAM instead of flash.
+       * The software can run much faster, but reduces RAM available to application.
+       * For breakpoints to work, you also need to change launch.json "runToEntryPoint" to be "platform_entry" instead of "main"
+       */
+      /*"-DPICO_COPY_TO_RAM=1"*/
+    ],
+    "cortex-debug.variableUseNaturalFormat": false,
+    "files.associations": {
+      "freertos.h": "c",
+      "functional": "cpp",
+      "optional": "cpp",
+      "ratio": "cpp",
+      "system_error": "cpp",
+      "array": "cpp",
+      "tuple": "cpp",
+      "type_traits": "cpp",
+      "utility": "cpp",
+      "cerrno": "cpp",
+      "*.dsc": "jsonc"
+    },
+    "cmake.configureOnOpen": true,
+  }
