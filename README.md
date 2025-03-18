@@ -249,6 +249,7 @@ sudo apt install g++
 ```
 
 Edit your ~/.bashrc file to add the following line at the end of the file:
+
 ```bash
 export CXX=/usr/bin/g++
 ```
@@ -281,6 +282,14 @@ To avoid the whole CR mess when working with Windows, type the following in your
 
 ```bash
 git config --global core.autocrlf false
+```
+
+### Misc Tools
+
+The ninja installation will require unzip:
+
+```bash
+sudo apt install unzip
 ```
 
 ### Install ARM Cross-Compiler Toolchain
@@ -547,12 +556,14 @@ Use a Windows browser to get to the ninja [download page](https://github.com/nin
 The download file '**ninja-linux.zip**' contains the x86 ninja executable for linux.
 Instead of downloading the file, right click its name and select "copy link".
 In your Unbuntu terminal window, do the following commands. After you type the 'wget' in the commands below, use shift-insert or ctrl-V to paste the link that you copied from the download page.
+
 ```bash
 cd ~/.local/bin
 wget https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux.zip
 unzip ninja-linux.zip
 chmod +x ninja
 ```
+
 Your version number may differ:
 
 ```bash
