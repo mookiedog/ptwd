@@ -11,7 +11,7 @@
     /* This option adds extra args to the cmake "configure" command. */
     "cmake.configureArgs": [
       /* Tell cmake where to find our toolchain file */
-      "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/host.cmake",
+      /*"-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/host.cmake",*/
 
       /* Tell CMake to display some debug info about what it is doing */
       /*"--debug-output",*/

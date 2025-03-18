@@ -1,8 +1,8 @@
 # Goal
 
-The goal of this repo is to provide a basic debuggable "hello, world" C/C++ project for Raspberry Pi Pico boards (Pico or Pico2, regular or wireless versions).
+The goal of this repo is to show you how to create a basic debuggable "hello, world" C/C++ project for Raspberry Pi Pico boards (Pico or Pico2, regular or wireless versions).
 
-Visual Studio Code will be the IDE for our development environment.
+Visual Studio Code will be the IDE for the development environment.
 The development environment is linux-centric, but can easily run on a Windows machine by using Windows Subsystem for Linux (WSL2).
 
 There is a fair bit of software to install, and there are a lot of steps.
@@ -34,18 +34,19 @@ It's a long list, but it's not overly difficult, and it only needs to happen onc
 The instructions assume that you will be using a Window machine and running WSL2 linux under Windows.
 If you choose to build the system on a pure Linux machine instead of Windows/WSL2, then you probably already know what you are doing and can figure out what you should be doing based on these instructions.
 
-* Install WSL2
+* [Install WSL2](#install-wsl2)
   * WSL2 Ubuntu Linux
-  * Windows Terminal app
-* Install VS Code
+  * Environment Variables
+* [Windows Terminal App](#windows-terminal-app)
+* [Install VS Code](#vs-code)
   * Install a bunch of VS Code extensions
-* Install Linux software
+* [Install Linux software](#linuxwsl2-software-installation)
   * Git
   * C/C++ cross compilers (to create Arm Cortex code that runs on the Pico hardware)
   * GDB (GNU debugger), for debugging ARM Cortex code
   * CMake, which creates the build system for ptwd project
   * Ninja, used by CMake to drive the actual build process
-* Prepare a 'projects' directory in Linux
+* [Prepare a 'projects' directory in Linux](#project-development-setup)
   * Install this project from github
   * Install Pi Pico software
     * Raspberry Pi Pico-SDK
@@ -61,7 +62,7 @@ It will be a bit of a trek to get there, but here we go...
 
 The following sections detail how to do the items listed, above.
 
-## WSL2 Installation
+## Install WSL2
 
 WSL (Windows Subsystem for Linux) runs a virtualized linux kernel inside Windows.
 If you haven't used WSL2 before, it's a real linux kernel running in a Windows virtual environment.
@@ -69,45 +70,79 @@ There is no need to do things like dual-boot Windows/Linux or anything like that
 
 The WSL2 installation process is defined [here](https://learn.microsoft.com/en-us/windows/wsl/install).
 Follow those instructions and all will be well.
-The default distribution is Ubuntu.
-That can be changed if you like, but the instructions that follow have some minor dependencies on you installing Ubuntu.
+But here is the short version. In the standard windows search box, type 'powershell'. Select the option to "run as administrator".
+ When the window opens, type the following commands:
 
-### Windows Terminal App
+```bash
+wsl --install
+wsl --install -d Ubuntu
+```
+
+The first install installs WSL2 itself.
+The second install installs a generic Ubuntu distro.
+
+There are other distro choices, but the instructions that follow might have some very minor dependencies on you installing Ubuntu. To see the other choices available directly from Microsoft sources, type:
+```bash
+wsl --list --online
+```
+
+## Windows Terminal App
 
 Once WSL2/Ubuntu has been installed, go to the Microsoft store and download the "[Windows Terminal](https://apps.microsoft.com/detail/9n0dx20hk701?hl=en-us&gl=US)" free app.
 Terminal works great for interacting with WSL2.
 It supports multiple terminal windows using a tabbed interface which is nice.
 
-**Note:** From this point on, any of the instructions in this document that are executed from a command line will be using a Windows Terminal window that is running Ubuntu/WSL.
+**Note:** From this point on, any of the instructions in this document that are executed from a Linux command line will be using a Windows Terminal window that is running Ubuntu/WSL.
 
-Open a Windows Terminal window into your WSL2 virtual linux machine.
-The easy way is to type 'term' in the main Windows search box, then click the entry marked "Ubuntu-WSL", as shown below:
+* Open the terminal app by typing 'terminal' into the Windows search box.
+* On the title bar, click the small down-arrow to get a bunch of options.
+* Find the 'settings' option and click it.
+* At the bottom left of the settings screen, you will see "Add New Profile".
+Click that.
+* Add a new empty profile.
+Give it a name, like 'wsl-Ubuntu'.
+* Change the 'command line' option to be '%SystemRoot%\System32\wsl.exe -d Ubuntu'.
+* In the Starting Directory option, uncheck the 'Use Parent Process Directory' option.
+* Enter '~' as the starting directory.
+* Click 'save'
+
+There are other options you can play with (like fonts and colors), but those mentioned above are the required options to be changed.
+
+If you click the same little down arrow on the title bar now, you will see a new entry with the name you entered earlier: 'wsl-Ubuntu'.
+Click the 'wsl-ubuntu' selection.
+
+The linux boot will takes a few seconds the very first time that it runs.
+You will be asked for a user name and password for your initial Ubuntu user account.
+You can use the same user name as your windows accout, or create a different user name.
+The new user name is used by linux only.
+The new user name will automatically be given 'sudo' privileges.
+
+From this point on, when you type 'terminal' in the windows search box, you will have the option to directly select your new Ubuntu distro:
 
 ![image](doc/images/terminal-app.jpg)
 
-You should see a terminal window pop up.
-You can change your preferences for fonts and colors and sizes and all that by clicking on the little down-arrow where the terminal tabs are located, then selecting 'Settings'.
-
-Get your new WSL2 Linux system up to date by typing:
+Use a terminal window to get your new WSL2 Linux system up to date by typing:
 
 ```bash
-$ sudo apt update
-$ sudo apt upgrade
+sudo apt update
+sudo apt upgrade
 ```
 
 The first time around, these commands may install a bunch of updates.
-You can run this command pair whenever you feel like to keep your Linux distro up-to-date.
+You should run this command pair once in a while to keep your Linux distro up-to-date for application updates and security patches.
 
 ### WSL and Windows Filesystems
 
 Both WSL and Windows run simultaneously, but each has its own separate filesystem.
 Even so, WSL2 arranges for the two filesystems get cross-mounted so that each one is accessable from the other.
 
-From Windows, the root of the WSL2 Ubuntu distro filesystem is always available as "\\wsl$\Ubuntu".
-Typing that into a Windows Explorer window will take you to the root directory '/' for your Ubuntu distro. If you ever go so far as to install multiple distros in WSL2, then the filesystem root for any other distros will take the form: '\\wsl$\<some-other-distro-name>.
+From Windows, the root of all the distros that may be installed is located at '\\wsl$' or \\wsl.localhost'. Appending the distro name takes you to the root of that distro's filesystem, as shown below:
 
-From Ubuntu, you can access the Windows filesystem via "/mnt/<drive-letter>".
-For example, doing an 'ls -l /mnt/c' in a linux terminal window will show you the contents of your top-level directory on Windows drive 'C:'.
+![image](doc/images/wsl-from-windows.jpg)
+
+Going the other way is just as easy.
+In Ubuntu, each Windows drive letter automatically gets mounted under '/mnt'.
+Doing an 'ls -l /mnt/c' in a linux terminal window will show you the contents of your top-level directory on Windows drive 'C:'.
 
 Linux commands like 'cp' or 'mv' operate seamlessly on both filesystems.
 If you are a linux person, it's nice to be able to use linux commands like 'find' and 'grep' on the directories inside your Windows machine.
@@ -126,7 +161,7 @@ If VS Code is running on a Windows machine, as a Windows executable, it will sea
 Official Microsoft installation instructions are located [here](https://code.visualstudio.com/docs/setup/windows).
 If that link goes dead, just google 'installing VS Code', and find a Microsoft link that tells you how to do it.
 
-If you are developing on a linux machine, VS Code can be installed as a native linux app using .deb or .rpm mechanisms.
+If you are developing strictly on a linux machine, VS Code can be installed as a native linux app using .deb or .rpm mechanisms.
 Google for the VS Code linux download page and there will be instructions.
 
 Once you have VS Code installed, you need to add a bunch of extensions, as described in the next section.
@@ -147,47 +182,50 @@ As you search for each one from the list below, it will give you an option to in
 
 * C/C++ (by Microsoft)
 * C/C++ Extension pack (by Microsoft)
-* C/C++ Themes (by Microsoft)
 * Cortex-debug
-* CMake
-* CMake Tools
-* Markdown Preview Github Styling
-* markdownlint
 * MemoryView
 * RTOS Views
+* Markdown Preview Github Styling
+* markdownlint
+
+The C/C++ Extension Pack should install a couple of other extensions, namely: CMake, CMake Tools, and Themes.
+
+Note that these extensions run as windows apps on Windows versions of VS Code and as linux apps on either linux versions of VS Code, or Windows versions of VS Code that are using a remote connection to a linux machine.
+What this means is that you might need to install linux versions of these extensions later, if you use Windows in its remote editor mode.
+We will cover that later.
 
 ## Linux/WSL2 Software Installation
 
 Before starting the installation process for all of the Linux software, make sure your linux machine (virtual or otherwise!) is up to date, as described earlier:
 
 ```bash
-$ sudo apt update
-$ sudo apt upgrade
+sudo apt update
+sudo apt upgrade
 ```
 
 ## Create a Local Bin Directory
 
 This project creates a few special executables to help build the software.
 Rather than put these tools in the standard system-wide installation locations,
-the build system will place them in a user-specific ~/.local/bin directory.
+the build system will place them in a user-specific "~/.local/bin directory".
 
 If that directory does not exist, use your terminal window to create it via the following:
 
 ```bash
-$ mkdir -p ~/.local/bin
+mkdir -p ~/.local/bin
 ```
 
-The standard Ubuntu ~/.profile will automatically add your new .local/bin directory to the PATH variable.
+The standard Ubuntu "~/.profile" you got with your fresh distro will automatically add your new "~/.local/bin" directory to the PATH variable.
 Check your PATH to see if the "~/.local/bin" directory is on it:
 
 ```bash
-$ echo $PATH|tr ':' '\n'|grep '[.]local'
+echo $PATH|tr ':' '\n'|grep '[.]local'
 /home/<your-user-name>/.local/bin
 ```
 
-If the directory is not on your PATH, log out and log in again so that your '~/.profile' gets re-executed.
-Typically, the ~/.profile will only add '~/.local/bin' to your PATH if the directory exists.
-If your .profile is not adding ~/.local/bin to your path, edit your .profile to add the following lines:
+If the directory is not on your PATH, log out and log in again so that your "~/.profile" gets re-executed.
+Typically, the "~/.profile" will only add "~/.local/bin" to your PATH if the directory exists.
+If your .profile is not adding "~/.local/bin" to your path, edit your .profile to add the following lines:
 
 ```bash
 # set PATH so it includes user's private bin if it exists
@@ -196,12 +234,33 @@ if [ -d "$HOME/.local/bin" ] ; then
 fi
 ```
 
-Log out and log in again (or type 'source ~/.profile'), and verify that '~/.local.bin' is on your PATH.
+Log out and log in again by closing the Ubuntu terminal window, then opening a new one.
+Verify that '~/.local.bin' is on your PATH.
+
+### Install GCC/G++
+
+GCC should come preinstalled on the fresh linux distro.
+It is harmless to reinstall it though.
+G++ (the C++ compiler) is typically not pre-installed, so make sure to install it as below:
+
+```bash
+sudo apt install gcc
+sudo apt install g++
+```
+
+Edit your ~/.bashrc file to add the following line at the end of the file:
+```bash
+export CXX=/usr/bin/g++
+```
+
+The Pico SDK requires that the CXX environment variable be defined so that it can find a __host__ C++ compiler (i.e. not a cross-compiler) to build the pioasm tool.
+The pioasm tool runs as a host application.
 
 ### Install Git
 
 Git is a source-code control system used for managing large projects.
 It should already be installed in your generic WSL2 Ubuntu distribution, but it is harmless to make sure, as shown below.
+If you see the message of the form 'git is already the newest version' (as shown below), it means git was already installed.
 
 ```bash
 $ sudo apt install git
@@ -218,10 +277,10 @@ The project's Git repository always has Unix-style LF line endings.
 Configuring the git setting 'core.autocrlf' to 'false' tells Git to *not* change files to use CRLF-style endings when it checks stuff out onto a Windows machine.
 VS Code on Windows operates just fine on LF-style endings so there is no need to add CR characters just because it is a Windows machine.
 
-To avoid adding CR chars to the code you check out, type the following in your WSL2 terminal window:
+To avoid the whole CR mess when working with Windows, type the following in your WSL2 terminal window:
 
 ```bash
-$ git config --global core.autocrlf false
+git config --global core.autocrlf false
 ```
 
 ### Install ARM Cross-Compiler Toolchain
@@ -229,29 +288,20 @@ $ git config --global core.autocrlf false
 ARM cross compilers are required to build code for the ARM processors on a Pi Pico.
 To get the Arm cross-compiler software installed, start off by downloading an appropriate toolchain from the Arm download page located [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads).
 
-#### For x86 PC
+#### Preparing a Tools Directory
 
-Assuming that your PC host is an x86 machine capable of running linux/WSL2, scroll down until you see the section called 'x86_64 Linux hosted cross toolchains'.
-From the 'AArch32 bare-metal target (arm-none-eabi)' subsection, find the link to download 'arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz'.
-The version number in the example (14.2.rel1) may have changed since this document was last updated, so just locate the most recent version, whatever it is.
-Don't download the file though, just right click the link and select "copy link".
-
-#### For ARM Raspberry Pi 5
-
-If you are developing on a Pi 5, scroll down the ARM download page until you see the section titled 'AArch64 Linux hosted cross toolchains'. You want the version 'AArch32 bare-metal target (arm-none-eabi)', downloaded via the file 'arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-eabi.tar.xz'. As with the x86 instructions, don't actually download the file, but right-click the link and select 'copy link'.
-
-Once the link has been selected for the proper download, we need to prepare a place for the downloaded cross-compilation tools to live.
+We need to prepare a place for the cross-compilation tools to live.
 If you have your own favorite way of doing things like this, do it your way.
 Note that if you *do* change where you want to put the tools, you will need to update the project file 'projects/ptwd/cmake/toolchains/arm-none-eabi.cmake' to reflect your changes.
-Otherwise, this is the recommended way:
+Otherwise, this is my recommended way:
 
 ```bash
 # This assumes that the latest version was named 14.2.rel1:
-$ sudo mkdir -p /opt/arm/arm-none-eabi/14.2.rel1
+sudo mkdir -p /opt/arm/arm-none-eabi/14.2.rel1
 ```
 
 The point of this directory structure is to allow multiple versions of the toolchain to live on your system.
-The toolchain directory will look like this:
+When we are done, the toolchain directory will look like this (perhaps with a different version number):
 
 ```text
 /opt
@@ -272,19 +322,48 @@ The resulting directory structure would look like this:
         └── 20.1.rel1
 ```
 
-You will be able switch over to the new tools or switch back to the old ones by just changing the appropriate CMake toolchain file to point at the proper directory.
+You will be able switch over to the new tools or switch back to the old ones by just changing an appropriate CMake toolchain file to point at the proper directory.
 This really helps keeping old projects alive when some new release breaks compatibilty with your old project: the old project can just continue to use the old tools.
 
-Now that the toolchain has a place to live, it's time to get it and install it.
-Assuming that the link to the toolchain on the ARM download website is still in you copy buffer, you can paste it after the 'wget' to avoid a bunch of typing in the example below.
+Now that the toolchain has a place to live, it's time to get it, then install it.
+
+#### Tools For x86 PC
+
+Assuming that your PC host is an x86 machine capable of running linux/WSL2, scroll down until you see the section called:
+
+```x86_64 Linux hosted cross toolchains```
+
+Inside that section, you will see a heading:
+
+```AArch32 bare-metal target (arm-none-eabi)```
+
+What you are looking for is:
+
+```arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz```
+
+Pictorially, you are looking for this entry on the webpage:
+
+![image](./doc/images/arm-tools.jpg)
+
+The version number in the example (14.2.rel1) may have changed since this document was last updated, so just locate the most recent version, whatever it is.
+Don't download the file though, just right click the link and select "copy link", then skip to [Downloading & Installing](#downloading--installing)
+
+#### Tools For ARM Raspberry Pi 5
+
+If you are developing on a Pi 5, scroll down the ARM download page until you see the section titled 'AArch64 Linux hosted cross toolchains'. You want the version 'AArch32 bare-metal target (arm-none-eabi)', downloaded via the file 'arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-eabi.tar.xz'. As with the x86 instructions, don't actually download the file, but right-click the link and select 'copy link'.
+
+#### Downloading & Installing
+
+Assuming that the link to the toolchain on the ARM download website is still in your copy buffer, you can paste it onto your command line after typing the 'wget' command to avoid a bunch of typing in the example below.
 Make sure you are in the proper directory before downloading the code, then get it using 'wget':
 
 ```bash
-$ cd /opt/arm/arm-none-eabi/14.2.rel1
-$ sudo wget https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz
+cd /opt/arm/arm-none-eabi/14.2.rel1
+sudo wget https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz
 ```
 
-At this point, you should have a very large archive file in your 14.2.rel1 directory:
+The version number in the example above may not match what you downloaded.
+Regardless, if you downloaded some version, you should have a very large archive file in your 14.2.rel1 (or equivalent) directory:
 
 ```bash
 $ ls -l
@@ -292,13 +371,14 @@ $ ls -l
 ```
 
 Next up is to extract the files from the archive that was downloaded.
-One problem (at least, for me) is that every single file in the entire archive is prepended with an annoyingly long initial directory name: 'arm-gnu-toolchain-**.*Rel*-x86_64-arm-none-eabi', where the '*' represents version info.
-I suppose it might be useful if you needed to install cross compilers for every single Arm architecture, but this project doesn't need that level of complexity.
-To get rid of that long pathname, extract the archive using the following command:
+One problem (at least, for me) is that every single file in the entire archive is prepended with an annoyingly long initial directory name: "arm-gnu-toolchain-*.*Rel*-x86_64-arm-none-eabi", where the '*' characters represent specific version numbers.
+
+It might be useful if a system needed to install cross compilers for every single Arm architecture, but this project doesn't need that level of complexity.
+To get rid of that long pathname, extract files in the archive using the following command:
 
 ```bash
 # assuming you are still in /opt/arm/arm-none-eabi/14.2.rel1 from the previous download step:
-$ sudo tar xf ./arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz --strip-components 1
+sudo tar xf ./arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz --strip-components 1
 ```
 
 Once tar completes, the cross-compilation executable tools will be located at /opt/arm/arm-none-eabi/14.2.rel1/bin.
@@ -317,7 +397,7 @@ Instead, this project will use CMake's 'toolchain' mechanism to tell the build s
 
 #### Updates When Installing a New Version of ARM tools
 
-The ptwd project file 'projects/ptwd/cmake/toolchains/arm-none-eabi.cmake' is set up to use the 14.2.rel1 version of the arm tools that were just installed.
+The ptwd project file 'projects/ptwd/cmake/toolchains/arm-none-eabi.cmake' is set up to use the 14.2.rel1 version of the arm tools that presumably were just installed.
 Verify that the variables from that file as shown below match where you downloaded and installed the tools, and that the version number matches:
 
 ```cmake
@@ -326,22 +406,28 @@ set(ARM_NONE_EABI_VERSION "14.2.rel1")
 set(CROSSCOMPILE_TOOL_PATH "/opt/arm/arm-none-eabi/${ARM_NONE_EABI_VERSION}/bin")
 ```
 
-For now, there is nothing to do: everything is good to go.
+If the version number of the tools has changed for you, edit the file to reflect your new version number and save it.
 
 ### GDB
 
 GDB is the Gnu Debugger.
 It will be used to debug the RP2xxx code that runs on the Pico board.
-Try executing the new cross-tool GDB as follows, and you will probably see the following error:
+
+Start off by trying to execute the new cross-tool GDB as follows. You may or may not see an error, as shown below:
 
 ```bash
-$ cd /opt/arm/arm-none-eabi/bin
+$ cd /opt/arm/arm-none-eabi/14.2.rel1/bin
 $ ./arm-none-eabi-gdb  --version
 ./arm-none-eabi-gdb: error while loading shared libraries: libncursesw.so.5: cannot open shared object file: No such file or directory
 ```
 
+If you don't see an error, you are good to go and can skip the next section on GDB and Ncurses.
+
+#### GDB and Missing Ncurses
+
 FYI, the 'w' version of libncurses (i.e. ''libncursesw.so.5') is the same as libncurses except that it can deal with 'wide' characters, meaning the UTF-8 charset.
-To fix this, we need to install libncurses5 as follows:
+
+If you do see an error when running GDB about a missing "libncursesw", you will need to do the following steps, below. If not, skip to the next section.
 
 ```bash
 sudo apt-get install libncurses5 libncursesw5
@@ -358,7 +444,7 @@ export PATH=$PATH:/usr/lib/x86_64-linux-gnu
 Now, GDB should run:
 
 ```bash
-$ cd /opt/arm/arm-none-eabi/bin
+$ cd /opt/arm/arm-none-eabi/14.2.rel1/bin
 $ ./arm-none-eabi-gdb --version
 GNU gdb (Arm GNU Toolchain 14.2.rel1 (Build arm-13.24)) 14.2.90.20240526-git
 Copyright (C) 2023 Free Software Foundation, Inc.
@@ -369,64 +455,70 @@ There is NO WARRANTY, to the extent permitted by law.
 
 ### Install OpenOCD
 
+_At some point, the RP2xxx support will exist in the Ubuntu distribution and installing OpenOCD will be as simple as "sudo apt install openocd".
+But for now, it needs to be built from source, as described in this next section._
+
 OpenOCD is the "Open On-Chip Debugger" software tool.
 GDB uses OpenOCD to talk to the silicon debug unit inside the chip being debugged.
-OpenOCD has been around forever, but it needs to run a special version for the Pi Pico boards because the RP2040/RP2350 processors on those boards are dual core.
-At some point, the RP2xxx support will exist in the Ubuntu distribution and installing OpenOCD will be as simple as "sudo apt install openocd".
-But for now, it needs to be built from source, described below.
+OpenOCD has been around forever, but it needs to run a special version for the Pi Pico boards because the RP2xxx processors on those boards are dual core.
 
-Install source code for OpenOCD, making sure to get the sources from raspberrypi where the RP2040/RP2350 support is located.
+Install source code for OpenOCD, making sure to get the sources from raspberrypi where the RP2xxx support is located.
 Go to the official Rpi OpenOCD repo located [here](https://github.com/raspberrypi/openocd).
 
 Type:
 
 ```bash
-$ cd ~/projects
-$ git clone https://github.com/raspberrypi/openocd.git
+cd ~/projects
+git clone https://github.com/raspberrypi/openocd.git
 ```
 
 On my system, I needed to install the developer version of ncurses-5:
 
 ```bash
-$ sudo apt-get install libncurses5-dev libncursesw5-dev
+sudo apt-get install libncurses5-dev libncursesw5-dev
 ```
 
 I also needed to install a bunch of packages that OpenOCD will need:
 
 ```bash
-$ sudo apt install libusb-1.0-0 libusb-1.0-0-dev libhidapi-dev libtool texinfo pkg-config
+sudo apt install libusb-1.0-0 libusb-1.0-0-dev libhidapi-dev libtool texinfo pkg-config make
 ```
 
 Finally, build OpenOCD:
 
 ```bash
-$ cd ~/projects/openocd
-$ ./bootstrap
-$ ./configure --enable-ftdi --enable-sysfsgpio --enable-bcm2835gpio --enable-cmsis-dap
-$ make
-$ sudo make install
-$ openocd --version
+cd ~/projects/openocd
+./bootstrap
+./configure --enable-ftdi --enable-sysfsgpio --enable-bcm2835gpio --enable-cmsis-dap
+make
+sudo make install
+openocd --version
 ```
 
 The fun never ends with openocd though.
-Now you need to create a file in directory "/etc/udev/rules.d"
+Now you need to create a special file in a special place.
+You don't need to use nano editor, you can use vim or emacs or anything else you have installed, but nano is always installed in every linux distro:
 
-The file is named "46-probe.rules".
-Use the nano editor in sudo mode to create that file containing the following text:
+```bash
+sudo nano /etc/udev/rules.d/46-probe.rules
+```
+You have to be sudo to edit a file in that directory.
+Add the following text to the file (you can cut and paste it from here):
 
 ```text
 # Pi Pico CMSIS-DAP USB debug probe
 ATTRS{idProduct}=="000c", ATTRS{idVendor}=="2e8a", MODE="666", GROUP="plugdev"
 ```
 
+If you are using nano, write the file by typing ctro-O, then ctrl-X to exit.
 Once the file is written, do the following:
 
 ```bash
-$ sudo udevadm control --reload
-$ sudo udevadm trigger
+sudo udevadm control --reload
+sudo udevadm trigger
 ```
 
-You will not need to do that again because the '46-probe.rules' file you created will take care of setting the permissions every time the machine reboots.
+You will not need to do the reload/trigger again because the '46-probe.rules' file you created will take care of setting the preoper permissions every time the virtual Ubuntu machine reboots.
 
 ### CMake
 
@@ -452,48 +544,31 @@ Instead, it comes as a zip file containing a single binary executable that needs
 In this case, we will store ninja in our ~/.local/bin directory that was created earlier in this document.
 
 Use a Windows browser to get to the ninja [download page](https://github.com/ninja-build/ninja/releases)
-The download file 'ninja-linux.zip' contains the x86 ninja executable.
-Download that file, then open it.
-The zip extractor will ask where to put it.
-Type '\\wsl$' then hit return.
-Remember this '\\wsl$' starting point because this is how Windows can access the WSL filesystem.
-Double click the Ubuntu icon and you will see that you are now at directory '/', the root of your WSL filesystem.
-From there, click through 'home', your user name, '.local', and finally, 'bin'.
-Select bin as the extraction target and then extract.
-
-From your WSL terminal window, type the following:
-
+The download file '**ninja-linux.zip**' contains the x86 ninja executable for linux.
+Instead of downloading the file, right click its name and select "copy link".
+In your Unbuntu terminal window, do the following commands. After you type the 'wget' in the commands below, use shift-insert or ctrl-V to paste the link that you copied from the download page.
 ```bash
-$ ll ~/.local/bin
-total 276
-drwxr-xr-x 2 robin robin   4096 Aug  5 11:43 ./
-drwxr-xr-x 4 robin robin   4096 Aug  5 11:43 ../
--rw-r--r-- 1 robin robin 273768 May 11 12:45 ninja
--rw-r--r-- 1 robin robin      0 Aug  5 11:43 ninja:Zone.Identifier
+cd ~/.local/bin
+wget https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux.zip
+unzip ninja-linux.zip
+chmod +x ninja
 ```
-
-You can remove the 'ninja:Zone.Identifier' file, if you see it.
-It is trash left over from the Windows zip extraction process.
-Run 'chmod +x' to make sure that the extracted 'ninja' file is executable, then run ninja as a test:
+Your version number may differ:
 
 ```bash
-$ cd ~/.local/bin
-$ chmod +x ninja
 $ ./ninja --version
 1.12.1
 ```
 
-You might get a different version number.
-
-Now, verify that your ~/.local/bin directory is on your PATH:
+Verify that your ~/.local/bin directory is on your PATH:
 
 ```bash
-$ cd
+$ cd ~
 $ which ninja
 /home/robin/.local/bin/ninja
 ```
 
-If the 'which' command could not find ninja, you have a problem.
+If the 'which' command could not find your ninja executable, you have a problem.
 See the section about '~/.local/bin' earlier in this document, and make sure that directory is on your PATH.
 
 ## Project Development Setup
@@ -518,6 +593,7 @@ Pictorially, we want to end up with a directory structure that has this general 
     ├── openocd       (a special version for debugging RP2xxx chips)
     ├── pico-sdk      (may contain multiple versions of the SDK over time)
     │   ├── 1.5.1
+    │   ├── 2.0.0
     │   └── 2.1.1
     └── ptwd          (where this project gets stored)
 ```
@@ -533,31 +609,49 @@ The Raspberry Pi Software Development Kit (SDK) is a collection of software tool
 The SDK can be installed in a number of fashions.
 For various reasons, we will install it using Git.
 
+First, we create the top-level directory inside the projects directory that will contain all the SDK versions:
+
 ```bash
-$ cd ~/projects
-$ mkdir pico-sdk
-$ cd pico-sdk
-
-# This clones the 'master' branch of the pico-sdk
-$ git clone https://github.com/raspberrypi/pico-sdk
-
-# Rename pico-sdk to reflect the SDK branch that we will be checking out:
-$ mv pico-sdk 2.1.1
-
-# Tell git that we actually want to use the "2.1.1" tag on the master branch
-$ cd 2.1.1
-$ git checkout 2.1.1
-
-# Update our branch so that it can do WiFi and Bluetooth for Pico[2]-W
-$ git submodule update --init
-
-# Tell the SDK that we want to make FreeRTOS for the Pico family available:
-$ git submodule add https://github.com/FreeRTOS/FreeRTOS-Kernel
-$ cd FreeRTOS-Kernel
-$ git submodule update --init
+cd ~/projects
+mkdir pico-sdk
+cd pico-sdk
 ```
 
-At this point, your 'projects' directory hierarchy should look like this:
+Next, we clone the 'master' branch of the pico-sdk into the new directory:
+
+```bash
+git clone https://github.com/raspberrypi/pico-sdk
+```
+
+Rename pico-sdk to reflect the SDK branch that we will be checking out:
+
+```bash
+mv pico-sdk 2.1.1
+```
+
+Now we tell git that we actually want to lock this cloned branch to the "2.1.1" tag on the master branch:
+
+```bash
+cd 2.1.1
+git checkout 2.1.1
+```
+
+Our new branch tag now matches its directory name.
+As always, update the new branch so that it can do WiFi and Bluetooth for Pico[2]-W:
+
+```bash
+git submodule update --init
+```
+
+Tell the SDK that we want to make FreeRTOS for the Pico family available to any project using this version of the SDK:
+
+```bash
+git submodule add https://github.com/FreeRTOS/FreeRTOS-Kernel
+cd FreeRTOS-Kernel
+git submodule update --init
+```
+
+At this point, the 'projects' directory hierarchy should look like this:
 
 ```text
 projects/
@@ -565,39 +659,99 @@ projects/
     └── 2.1.1
 ```
 
+## Picotool
+
+Picotool is a tool used by the SDK to perform various tasks while building project binaries.
+In theory, the SDK will build picotool as needed.
+In practice, this approach does not always work.
+I have had better luck arranging to build the 'picotool' once, and then intalling in my .local/bin where all my projects can use the same executable.
+To that end, do the following:
+
+```bash
+cd ~/projects
+git clone https://github.com/raspberrypi/picotool
+cd picotool
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=~/.local ..
+make
+make install
+```
+
+The 'make install' step will install the picotool executable in your ".local/bin" directory.
+Prove to yourself that picotool exists, and is being found in your own ".local/bin":
+
+```bash
+$ which picotool
+/home/<your-name-here>/.local/bin/picotool
+```
+
+Finally, do the following so that you can use picotool without needing sudo:
+
+```bash
+cd ~/projects/picotool
+sudo cp udev/99-picotool.rules /etc/udev/rules.d/
+```
+
+## RPi SDK Examples
+
+The Pi Pico SDK comes with a ton of example code.
+To get the examples, do the following:
+
+```bash
+cd ~/projects
+git clone https://github.com/raspberrypi/pico-examples
+```
+
+You can look through the examples at your leisure, but the ptwd project will be using the 'onewire' library contained in the examples.
+
 ## Getting the PTWD Project Source Code
 
-You can do this from the command line or from VS Code.
+Start VS code running.
+You can start it from Windows by typing its name in the seach box 'code'.
+You can start it from any terminal window running linux by typing 'code&'.
 
-From the command line:
+To get the PTWD project on your system using the command line:
+
 ```bash
-$ cd ~/projects
-$ git clone https://github.com/mookiedog/ptwd
+cd ~/projects
+git clone https://github.com/mookiedog/ptwd
 ```
-For VS code, click on the 'source control' icon from the ribbon on the left side of the VS Code window.
-As in the RPi SDK section, select 'clone repository', then 'clone from Github', and type 'mookiedog/ptwd' in the search box.
-Select the highlighted 'mookiedog/ptwd' item from the list.
-A window will ask where you want to store the repository.
-Like before, navigate to your home directory, and click into the projects directory, then click 'ok'.
 
-When it completes, your 'projects' directory structure should show you a new ptwd directory:
+The 'projects' directory structure should show a new 'ptwd' directory:
 
 ```text
 projects
     ├── openocd
+    ├── pico-examples
     ├── pico-sdk
     └── ptwd
 ```
 
+## Using VS Code in Remote Mode
+
+VS Code can be run directly from linux, or it can be run on the Windows machine.
+If you start it from Windows, you will need to open a remote connection to access the linux machine.
+If you start it from Linux, it actually starts it in Windows, then automatically opens a remote connection back to linux anyway.
+There is no advantage to doing it one way or the other.
+
+If you start VS code from Windows, you need to click the little green box in the lower left corner with two >< characters in it.
+Select the 'Connect to WSL' option.
+
+If this is your first time running Code that was installed under Windows but is connecting to a WSL distro, then you need to reinstall a couple of VS Code extensions so that they operate properly as linux apps when using the linux remote connection.
+
+* C/C++ (by Microsoft)
+* C/C++ Extension pack (by Microsoft)
+* Cortex Debugger (By Marus25)
+
 ## Building the Project
 
 We are finally ready to build the project.
+Use VS Code to open the directory containing the ptwd project.
 The first step is to set the project up for the Pico board that you want to use.
 
-Use VS Code to open the directory containing the ptwd project.
-
 Click on the file 'CMakeLists.txt' to open it for editing.
-Hit ctrl-f to search for 'set(PICO_BOARD'.
+Hit ctrl-f to search for the string 'set(PICO_BOARD'.
 The default sets the board to 'pico2'.
 If you are using a different pico board, change pico2 to the board you want to use, as per the comments in the CMakeLists.txt file, then save the file.
 
@@ -664,7 +818,6 @@ If things are acting weird, the nuclear option to get back on track is to:
 1) hit "F1", then type "CMake: delete cache and reconfigure"
 1) hit "F7" to rebuild everything
 
-
 ## Installing Firmware and Debugging
 
 The ptwd project contains a '.vscode/launch.json' file which tells VS Code how to work with the debugger hardware.
@@ -686,7 +839,7 @@ winget install --interactive --exact dorssel.usbipd-win
 It will download and run an installer.
 Do what the installer says.
 
-After the installer completes, open a powershell 'administrator' window, then type "usbipd list" as shown.
+After the installer completes, open a new powershell 'administrator' window, then type "usbipd list" as shown.
 You will get back something like this, obviously depending on the USB devices that are attached to your own machine:
 
 ```text
@@ -732,7 +885,7 @@ PS C:\Users\robin>usbipd attach --wsl --busid 8-2
 ```
 
 The busID can change if you reboot your system, so you need to do the list command before attaching.
-You will need to reattach the debugger to WSL if you ever unplug it.
+You will need to run the 'attach' command (above) to reattach the debugger to WSL if you ever unplug it or if it loses power or the system reboots, etc.
 It's a bit annoying to have to keep reconnecting the USB dongles each time you restart WSL, but that's life.
 But at least WSL can access USB devices now!
 
