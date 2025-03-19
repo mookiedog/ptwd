@@ -1,6 +1,8 @@
 # Goal
 
-The goal of this repo is to show you how to create a basic debuggable "hello, world" C/C++ project for Raspberry Pi Pico boards (Pico or Pico2, regular or wireless versions).
+The goal of this repo is to show you how get your PC set up to create a basic debuggable "hello, world" C/C++ project for Raspberry Pi Pico boards (Pico or Pico2, regular or wireless versions).
+
+The project itself is pretty minimal, although it does demonstrate how to use FreeRTOS. The project will blink an LED in one task, read a temperature sensor in another task, and use the RTT mechanism to send a debug IO stream from the board being debugged to the debugger window on the development machine.
 
 Visual Studio Code will be the IDE for the development environment.
 The development environment is linux-centric, but can easily run on a Windows machine by using Windows Subsystem for Linux (WSL2).
@@ -8,7 +10,7 @@ The development environment is linux-centric, but can easily run on a Windows ma
 There is a fair bit of software to install, and there are a lot of steps.
 A lot of this is due to the fact that we will be 'cross compiling', meaning that the compiler toolchain does not generate code for the host machine's processor, but the target processor on the Pi Pico board.
 
-Don't worry, we will get through all of it!
+The good news is that once all of this prep work gets done, all you need to remember is that 'F7' builds your project, and 'F5' flashes it onto your board and starts the debugger. The development cycle becomes very, very simple!
 
 ## Development System Overview
 
@@ -18,7 +20,7 @@ The development system to be created has been tested on three different OS/machi
 1) an x86-64 machine running Linux Mint 22
 1) a ARM-based Raspberry Pi 5 running Raspberry Pi OS, its own flavor of Linux
 
-The development system should work on MacOS, but I don't have access to a Mac to test that out.
+The development system should work on MacOS (with adjustments to the installation process, of course), but I don't have access to a Mac to test that out.
 
 Once the tools are installed, all project development will occur directly within the VS Code Integrated Development Environment (IDE): editing, building, flashing, and debugging of the hardware.
 VS Code is available for x86 and ARM, and runs under Windows WSL2 as well as other linux distros.
@@ -41,11 +43,11 @@ If you choose to build the system on a pure Linux machine instead of Windows/WSL
 * [Install VS Code](#vs-code)
   * Install a bunch of VS Code extensions
 * [Install Linux software](#linuxwsl2-software-installation)
-  * Git
-  * C/C++ cross compilers (to create Arm Cortex code that runs on the Pico hardware)
-  * GDB (GNU debugger), for debugging ARM Cortex code
-  * CMake, which creates the build system for ptwd project
-  * Ninja, used by CMake to drive the actual build process
+  * [Host Tools](#install-host-tools)
+  * [Download ARM Tools](#downloading-arm-tools-for-x86-pc)
+  * [Test GDB for ARM](#test-gdb-for-arm) (GNU debugger)
+  * [OpenOCD](#install-openocd), Interfaces GDB to on-chip debugging silicon
+  * [Ninja](#ninja), used by CMake to drive the actual build process
 * [Prepare a 'projects' directory in Linux](#project-development-setup)
   * Install this project from github
   * Install Pi Pico software
@@ -113,7 +115,7 @@ Click the 'wsl-ubuntu' selection.
 
 The linux boot will takes a few seconds the very first time that it runs.
 You will be asked for a user name and password for your initial Ubuntu user account.
-You can use the same user name as your windows accout, or create a different user name.
+You can use the same user name as your windows account, or create a different user name.
 The new user name is used by linux only.
 The new user name will automatically be given 'sudo' privileges.
 
@@ -121,7 +123,8 @@ From this point on, when you type 'terminal' in the windows search box, you will
 
 ![image](doc/images/terminal-app.jpg)
 
-Use a terminal window to get your new WSL2 Linux system up to date by typing:
+Use a terminal window to get your new WSL2 Linux system.
+Get the system software up to date by typing:
 
 ```bash
 sudo apt update
@@ -171,14 +174,13 @@ Once you have VS Code installed, you need to add a bunch of extensions, as descr
 One of VS Code's best features is that it is amazingly extensible.
 People all over the world write useful "extensions" that add new features to the editor.
 This project needs a bunch of extensions to be installed.
-To install the extensions, start VS Code.
-You don't need to open any files or directories at this point.
-Click the 'extensions' icon on the left side ribbon.
-The 'extensions' icon looks like 3 boxes with a 4th box floating above the 3 boxes.
-Once you find that icon, click it.
-It will open a search box that says 'Search Extensions in Marketplace'.
-There are a bunch to install!
-As you search for each one from the list below, it will give you an option to install it. Install each one in turn:
+To install the extensions:
+
+* Start VS Code, but don't open any files or directories just yet.
+* Click the 'extensions' icon on the left side ribbon (icon looks like 3 boxes with a 4th box floating above the 3 boxes)
+* A search box will open saying 'Search Extensions in Marketplace'
+
+Search for each of the extensions listed below and install each one in turn when given the chance:
 
 * C/C++ (by Microsoft)
 * C/C++ Extension pack (by Microsoft)
@@ -192,15 +194,25 @@ The C/C++ Extension Pack should install a couple of other extensions, namely: CM
 
 Note that these extensions run as windows apps on Windows versions of VS Code and as linux apps on either linux versions of VS Code, or Windows versions of VS Code that are using a remote connection to a linux machine.
 What this means is that you might need to install linux versions of these extensions later, if you use Windows in its remote editor mode.
-We will cover that later.
+VS Code will let you know if you need to install the linux versions later.
 
 ## Linux/WSL2 Software Installation
 
-Before starting the installation process for all of the Linux software, make sure your linux machine (virtual or otherwise!) is up to date, as described earlier:
+Before starting the installation process for all of the Linux software, make sure your linux machine (virtual or otherwise!) is up to date. Use a terminal window talking to your linux machine:
 
 ```bash
 sudo apt update
 sudo apt upgrade
+```
+
+## Create a 'projects' Directory
+
+A lot of the software we will be installing needs to be installed in a fashion that certain parts can find other parts.
+To that end, we will be putting everything inside a directory called 'projects' located inside your home directory.
+Create that directory now:
+
+```bash
+mkdir ~/projects
 ```
 
 ## Create a Local Bin Directory
@@ -216,16 +228,20 @@ mkdir -p ~/.local/bin
 ```
 
 The standard Ubuntu "~/.profile" you got with your fresh distro will automatically add your new "~/.local/bin" directory to the PATH variable.
-Check your PATH to see if the "~/.local/bin" directory is on it:
+You will either need to close your terminal window and open a new one, or you can just re-run your .bashrc via:
+
+```bash
+. ~/.bashrc
+```
+
+Check your PATH to verify that "~/.local/bin" directory is on it now:
 
 ```bash
 echo $PATH|tr ':' '\n'|grep '[.]local'
 /home/<your-user-name>/.local/bin
 ```
 
-If the directory is not on your PATH, log out and log in again so that your "~/.profile" gets re-executed.
-Typically, the "~/.profile" will only add "~/.local/bin" to your PATH if the directory exists.
-If your .profile is not adding "~/.local/bin" to your path, edit your .profile to add the following lines:
+If your .profile is not adding "~/.local/bin" to your path, edit your '~/.profile' to add the following lines:
 
 ```bash
 # set PATH so it includes user's private bin if it exists
@@ -234,46 +250,28 @@ if [ -d "$HOME/.local/bin" ] ; then
 fi
 ```
 
-Log out and log in again by closing the Ubuntu terminal window, then opening a new one.
-Verify that '~/.local.bin' is on your PATH.
+If you had to edit your .profile, verify that "~/.local/bin" is on your path before continuing.
 
-### Install GCC/G++
+### Install Host Tools
 
-GCC should come preinstalled on the fresh linux distro.
-It is harmless to reinstall it though.
-G++ (the C++ compiler) is typically not pre-installed, so make sure to install it as below:
+A number of tools that need to run on the host machine need to be installed.
+It is possible that they are already installed in the fresh WSL distro, but it is harmless to ask to reinstall them.
+Install them as below:
 
 ```bash
-sudo apt install gcc
-sudo apt install g++
+sudo apt install gcc g++ git unzip cmake
 ```
 
-Edit your ~/.bashrc file to add the following line at the end of the file:
+The gcc and g++ compilers installed above generate code for your Linux host machine, not the ARM chips on the Pico boards. The Pico SDK expects to find the host g++ compiler using an environment variable called 'CXX'.
+Run the following command to add the appropriate CXX definition to your .bashrc file:
 
 ```bash
-export CXX=/usr/bin/g++
-```
-
-The Pico SDK requires that the CXX environment variable be defined so that it can find a __host__ C++ compiler (i.e. not a cross-compiler) to build the pioasm tool.
-The pioasm tool runs as a host application.
-
-### Install Git
-
-Git is a source-code control system used for managing large projects.
-It should already be installed in your generic WSL2 Ubuntu distribution, but it is harmless to make sure, as shown below.
-If you see the message of the form 'git is already the newest version' (as shown below), it means git was already installed.
-
-```bash
-$ sudo apt install git
-Reading package lists... Done
-Building dependency tree... Done
-Reading state information... Done
-git is already the newest version (1:2.34.1-1ubuntu1.11).
-0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+echo "export CXX=/usr/bin/g++" >> ~/.bashrc
 ```
 
 #### Git and Line Endings
 
+We need to make a small configuration change to the git program installed in the previous step.
 The project's Git repository always has Unix-style LF line endings.
 Configuring the git setting 'core.autocrlf' to 'false' tells Git to *not* change files to use CRLF-style endings when it checks stuff out onto a Windows machine.
 VS Code on Windows operates just fine on LF-style endings so there is no need to add CR characters just because it is a Windows machine.
@@ -284,51 +282,40 @@ To avoid the whole CR mess when working with Windows, type the following in your
 git config --global core.autocrlf false
 ```
 
-### Misc Tools
-
-The ninja installation will require unzip:
-
-```bash
-sudo apt install unzip
-```
-
 ### Install ARM Cross-Compiler Toolchain
 
-ARM cross compilers are required to build code for the ARM processors on a Pi Pico.
-To get the Arm cross-compiler software installed, start off by downloading an appropriate toolchain from the Arm download page located [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads).
+ARM cross compilers are required to build code for the ARM processors on the various Pi Pico boards.
+A cross-compiler runs on a particular machine architecture (like x86), but produces code for a different machine architecture (ARM, in this case).
+We will set things up so that your PC can have access to multiple versions of the ARM cross compiler toolchain.
 
 #### Preparing a Tools Directory
 
 We need to prepare a place for the cross-compilation tools to live.
-If you have your own favorite way of doing things like this, do it your way.
-Note that if you *do* change where you want to put the tools, you will need to update the project file 'projects/ptwd/cmake/toolchains/arm-none-eabi.cmake' to reflect your changes.
-Otherwise, this is my recommended way:
+There are many ways to do that, but the project files are set up to expect the tools to end up in a particular hierarchy, as shown below:
+
+```text
+/opt
+└── arm
+    └── arm-none-eabi
+        └── 14.2.rel1
+
+```
+
+Subsequent versions like some hypothetical xx.y version would be downloaded into the same arm-none-eabi directory.
+All the installed versions would live side-by-side, as shown:
+
+```text
+/opt
+└── arm
+    └── arm-none-eabi
+        ├── 14.2.rel1
+        └── xx.y.rel1
+```
+
+To set this up, (and assuming that the version you downloaded was named 14.2.rel1), type the following to create the basic directory structure:
 
 ```bash
-# This assumes that the latest version was named 14.2.rel1:
 sudo mkdir -p /opt/arm/arm-none-eabi/14.2.rel1
-```
-
-The point of this directory structure is to allow multiple versions of the toolchain to live on your system.
-When we are done, the toolchain directory will look like this (perhaps with a different version number):
-
-```text
-/opt
-└── arm
-    └── arm-none-eabi
-        └── 14.2.rel1
-
-```
-
-In the future, when some new, hypothetical version 20.1 of the tools gets released, you could download that new toolchain beside the current 14.2 directory.
-The resulting directory structure would look like this:
-
-```text
-/opt
-└── arm
-    └── arm-none-eabi
-        └── 14.2.rel1
-        └── 20.1.rel1
 ```
 
 You will be able switch over to the new tools or switch back to the old ones by just changing an appropriate CMake toolchain file to point at the proper directory.
@@ -336,8 +323,10 @@ This really helps keeping old projects alive when some new release breaks compat
 
 Now that the toolchain has a place to live, it's time to get it, then install it.
 
-#### Tools For x86 PC
+#### Downloading ARM Tools For x86 PC
 
+To get the Arm cross-compiler software installed, start off by downloading an appropriate toolchain from the Arm download page located [here](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads).
+Click that link to view the download page.
 Assuming that your PC host is an x86 machine capable of running linux/WSL2, scroll down until you see the section called:
 
 ```x86_64 Linux hosted cross toolchains```
@@ -397,30 +386,25 @@ Verify that the new tools are functioning by running gcc directly from its bin d
     $ ./bin/arm-none-eabi-gcc --version
     arm-none-eabi-gcc (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119
     Copyright (C) 2024 Free Software Foundation, Inc.
-    This is free software; see the source for copying conditions.  There is NO
-    warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
 
-There is no need to add the cross-compiler's bin directory to your PATH variable.
-Instead, this project will use CMake's 'toolchain' mechanism to tell the build system how to find the tools.
+Do __not__ add the cross-compiler's bin directory to your PATH variable.
+We will be using CMake's 'toolchain' mechanism to tell the build system how to find the ARM tools so they do not need to go on your PATH.
 
 #### Updates When Installing a New Version of ARM tools
 
-The ptwd project file 'projects/ptwd/cmake/toolchains/arm-none-eabi.cmake' is set up to use the 14.2.rel1 version of the arm tools that presumably were just installed.
-Verify that the variables from that file as shown below match where you downloaded and installed the tools, and that the version number matches:
+_This section only applies if you install a new version of the ARM tools, or if you ever need to update a project to use different tools._
 
-```cmake
-# This explicitly overrides the built-in tools to use a specific version
-set(ARM_NONE_EABI_VERSION "14.2.rel1")
-set(CROSSCOMPILE_TOOL_PATH "/opt/arm/arm-none-eabi/${ARM_NONE_EABI_VERSION}/bin")
-```
+The project will contain a toolchain file, which explains where to find the ARM toolchain you just installed.
+For the project we will be installing later, the toolchain file will be located at 'projects/ptwd/cmake/toolchains/arm-none-eabi.cmake'.
+If you were to install new ARM tools, you could change your toolchain file to use them by editing the 'arm-none-eabi.cmake' file to point at the new tools.
 
-If the version number of the tools has changed for you, edit the file to reflect your new version number and save it.
+If the version number of the tools has changed for you, edit the toolchain file to reflect your new version number and save it.
 
-### GDB
+### Test GDB For ARM
 
 GDB is the Gnu Debugger.
-It will be used to debug the RP2xxx code that runs on the Pico board.
+A version of GDB that targets the RP2xxx ARM processors was included with the ARM tools that were just installed, above.
 
 Start off by trying to execute the new cross-tool GDB as follows. You may or may not see an error, as shown below:
 
@@ -430,7 +414,7 @@ $ ./arm-none-eabi-gdb  --version
 ./arm-none-eabi-gdb: error while loading shared libraries: libncursesw.so.5: cannot open shared object file: No such file or directory
 ```
 
-If you don't see an error, you are good to go and can skip the next section on GDB and Ncurses.
+If you don't see an error, you are good to go and can skip the next section on GDB and Ncurses and go directly to [installing OpenOCD](#install-openocd).
 
 #### GDB and Missing Ncurses
 
@@ -450,16 +434,13 @@ It is easiest to modify your .bashrc file to add the following line:
 export PATH=$PATH:/usr/lib/x86_64-linux-gnu
 ```
 
-Now, GDB should run:
+Now, GDB should run and produce some version information in this general form:
 
 ```bash
 $ cd /opt/arm/arm-none-eabi/14.2.rel1/bin
 $ ./arm-none-eabi-gdb --version
 GNU gdb (Arm GNU Toolchain 14.2.rel1 (Build arm-13.24)) 14.2.90.20240526-git
 Copyright (C) 2023 Free Software Foundation, Inc.
-License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
-This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law.
 ```
 
 ### Install OpenOCD
@@ -471,10 +452,7 @@ OpenOCD is the "Open On-Chip Debugger" software tool.
 GDB uses OpenOCD to talk to the silicon debug unit inside the chip being debugged.
 OpenOCD has been around forever, but it needs to run a special version for the Pi Pico boards because the RP2xxx processors on those boards are dual core.
 
-Install source code for OpenOCD, making sure to get the sources from raspberrypi where the RP2xxx support is located.
-Go to the official Rpi OpenOCD repo located [here](https://github.com/raspberrypi/openocd).
-
-Type:
+Install source code for OpenOCD, making sure to get the sources from raspberrypi where the RP2xxx support is located:
 
 ```bash
 cd ~/projects
@@ -484,7 +462,7 @@ git clone https://github.com/raspberrypi/openocd.git
 On my system, I needed to install the developer version of ncurses-5:
 
 ```bash
-sudo apt-get install libncurses5-dev libncursesw5-dev
+sudo apt install libncurses5-dev libncursesw5-dev
 ```
 
 I also needed to install a bunch of packages that OpenOCD will need:
@@ -505,43 +483,21 @@ openocd --version
 ```
 
 The fun never ends with openocd though.
-Now you need to create a special file in a special place.
-You don't need to use nano editor, you can use vim or emacs or anything else you have installed, but nano is always installed in every linux distro:
+We need to give ourselves permission to access the USB debug probe so that we don't have to use sudo all the time.
+For that, we create another rules file as follows:
 
 ```bash
-sudo nano /etc/udev/rules.d/46-probe.rules
-```
-You have to be sudo to edit a file in that directory.
-Add the following text to the file (you can cut and paste it from here):
-
-```text
-# Pi Pico CMSIS-DAP USB debug probe
-ATTRS{idProduct}=="000c", ATTRS{idVendor}=="2e8a", MODE="666", GROUP="plugdev"
+sudo printf '# Pi Pico CMSIS-DAP USB debug probe\nATTRS{idProduct}=="000c", ATTRS{idVendor}=="2e8a", MODE="666", GROUP="plugdev"\n' >> /etc/udev/rules.d/46-probe.rules
 ```
 
-If you are using nano, write the file by typing ctro-O, then ctrl-X to exit.
-Once the file is written, do the following:
+Finally, we trigger reloading the new rules file we just created:
 
 ```bash
 sudo udevadm control --reload
 sudo udevadm trigger
 ```
 
-You will not need to do the reload/trigger again because the '46-probe.rules' file you created will take care of setting the preoper permissions every time the virtual Ubuntu machine reboots.
-
-### CMake
-
-CMake is used to generate a build process that gets used to create all the pieces required to make up a project.
-It can be installed via the standard Ubuntu Linux mechanisms, as shown below.
-Run 'cmake' after it gets installed to prove that it exists:
-
-```bash
-$ sudo apt install cmake
-$ cmake --version
-cmake version 3.22.1
-
-CMake suite maintained and supported by Kitware (kitware.com/cmake).
-```
+From now on, the rules will be reapplied every time WSL starts.
 
 ### Ninja
 
@@ -552,10 +508,11 @@ Ninja is not installable in the normal 'apt install ...' fashion.
 Instead, it comes as a zip file containing a single binary executable that needs to be stored somewhere.
 In this case, we will store ninja in our ~/.local/bin directory that was created earlier in this document.
 
-Use a Windows browser to get to the ninja [download page](https://github.com/ninja-build/ninja/releases)
+Use a browser to get to the ninja [download page](https://github.com/ninja-build/ninja/releases)
 The download file '**ninja-linux.zip**' contains the x86 ninja executable for linux.
+If you are not on an x86 host, find the appropriate executable.
 Instead of downloading the file, right click its name and select "copy link".
-In your Unbuntu terminal window, do the following commands. After you type the 'wget' in the commands below, use shift-insert or ctrl-V to paste the link that you copied from the download page.
+In your Linux terminal window, do the following commands. After you type the 'wget' in the commands below, use shift-insert or ctrl-V to paste the link that you copied from the download page.
 
 ```bash
 cd ~/.local/bin
@@ -564,37 +521,29 @@ unzip ninja-linux.zip
 chmod +x ninja
 ```
 
+Verify that ninja is working.
 Your version number may differ:
 
 ```bash
-$ ./ninja --version
+$ cd ~
+$ ninja --version
 1.12.1
 ```
 
-Verify that your ~/.local/bin directory is on your PATH:
-
-```bash
-$ cd ~
-$ which ninja
-/home/robin/.local/bin/ninja
-```
-
-If the 'which' command could not find your ninja executable, you have a problem.
-See the section about '~/.local/bin' earlier in this document, and make sure that directory is on your PATH.
-
 ## Project Development Setup
 
-The linux-based tools are all installed now for working with the project.
-The next step is to set up a project directory structure.
+The next step is to start filling out the project directory structure.
 There is a fair amount of software source that needs to be installed, and a some of it needs to know where other parts of it are located.
-As a result, we define how everything needs to sit in the filesystem so that things can find each other.
+By installing things as decribed in the sections that follows, the various bits of the system will be able to find each other.
 
 ### Development Directory Structure
 
 The main part of the project directory involves the Pico SDK (Software Development Kit) is quite large, at over 600 megabytes.
 The SDK could be installed by cmake as sub-piece of each of your Pico projects, but replicating the entire SDK for every project in your sytem that might need it is a giant waste of disk storage.
-Instead, all projects will share a single SDK installation by storing it at a well-known location in the 'projects' directory.
+Instead, we will set things up so that all projects will share a single SDK installation.
+We do this by storing the SDK at a well-known location in the 'projects' directory.
 We then tell the individual Pico development projects where to find it.
+This also allows us to store multiple versions of the SDK, enabling old projects to use old SDK versions without forcing them to uipgrade.
 
 Pictorially, we want to end up with a directory structure that has this general form:
 
@@ -602,16 +551,13 @@ Pictorially, we want to end up with a directory structure that has this general 
 /home/<your-user-name>/
 └── projects/
     ├── openocd       (a special version for debugging RP2xxx chips)
+    ├── pico-examples (sample code for SDK applications)
     ├── pico-sdk      (may contain multiple versions of the SDK over time)
-    │   ├── 1.5.1
-    │   ├── 2.0.0
-    │   └── 2.1.1
-    └── ptwd          (where this project gets stored)
+    │   ├── 1.5.1     (predates the Pico/RP2040 only)
+    │   ├── 2.0.0     (first version that supports Pico and Pico2)
+    │   └── 2.1.1     (the most version, at time of writing)
+    └── ptwd          (where our Pico project gets stored)
 ```
-
-In the same fashion as we did with the cross compiler toolchain, the SDK directory structure is set up so that we can store multiple versions of the SDK, allowing different projects the ability to use different versions.
-This is important because the SDK updates to this point typically have a small number of compatibility-breaking changes.
-By retaining old versions of the SDK, old projects will continue to build.
 
 ### RPi SDK
 
@@ -654,7 +600,7 @@ As always, update the new branch so that it can do WiFi and Bluetooth for Pico[2
 git submodule update --init
 ```
 
-Tell the SDK that we want to make FreeRTOS for the Pico family available to any project using this version of the SDK:
+Now, we make FreeRTOS for the Pico family available to any project using this version of the SDK:
 
 ```bash
 git submodule add https://github.com/FreeRTOS/FreeRTOS-Kernel
@@ -662,13 +608,14 @@ cd FreeRTOS-Kernel
 git submodule update --init
 ```
 
-At this point, the 'projects' directory hierarchy should look like this:
+Finally, we need to create an environment variable used by various parts of the build system to explain where to find the version of SDK they should be using:
+Execute the following line to add the environment variable to your ~/.bashrc file:
 
-```text
-projects/
-└── pico-sdk
-    └── 2.1.1
+```bash
+echo "PICO_SDK_PATH=/home/<user-name>/projects/pico-sdk/2.1.1" >> ~/.bashrc
 ```
+
+Either close the terminal and reopen it, or execute ". ~/.bashrc" to make sure that the variable is defined in your current shell.
 
 ## Picotool
 
@@ -714,13 +661,9 @@ cd ~/projects
 git clone https://github.com/raspberrypi/pico-examples
 ```
 
-You can look through the examples at your leisure, but the ptwd project will be using the 'onewire' library contained in the examples.
+You can look through the examples at your leisure, but this 'ptwd' project will be using the 'onewire' library contained in the examples.
 
 ## Getting the PTWD Project Source Code
-
-Start VS code running.
-You can start it from Windows by typing its name in the seach box 'code'.
-You can start it from any terminal window running linux by typing 'code&'.
 
 To get the PTWD project on your system using the command line:
 
@@ -741,7 +684,10 @@ projects
 
 ## Using VS Code in Remote Mode
 
-VS Code can be run directly from linux, or it can be run on the Windows machine.
+Start VS code running.
+You can start it from Windows by typing its name in the seach box 'code'.
+You can start it from any terminal window running linux by typing 'code&'.
+
 If you start it from Windows, you will need to open a remote connection to access the linux machine.
 If you start it from Linux, it actually starts it in Windows, then automatically opens a remote connection back to linux anyway.
 There is no advantage to doing it one way or the other.
@@ -841,7 +787,9 @@ There is a software package that allows you to tell Windows to give control of a
 
 Plug your [Raspberry Pi Pico Debug Probe](https://www.raspberrypi.com/documentation/microcontrollers/debug-probe.html) into a USB port on your Windows machine.
 
-Using your terminal app, open a Windows powershell or cmd prompt, then type:
+Using your terminal app, open a Windows powershell or cmd prompt in administrator mode.
+Do NOT use a linux terminal window!
+Type the following:
 
 ```text
 winget install --interactive --exact dorssel.usbipd-win
@@ -850,7 +798,7 @@ winget install --interactive --exact dorssel.usbipd-win
 It will download and run an installer.
 Do what the installer says.
 
-After the installer completes, open a new powershell 'administrator' window, then type "usbipd list" as shown.
+Still from your powershell 'administrator' window, type "usbipd list" as below.
 You will get back something like this, obviously depending on the USB devices that are attached to your own machine:
 
 ```text
@@ -867,18 +815,20 @@ Persisted:
 GUID                                  DEVICE
 ```
 
-Locate the proper device, the one with "CMSIS-DAP" in its name.
-In this case, its busID (its USB address info) is 8-2.
+The debug device will be the one with "CMSIS-DAP" in its name.
+In this case, its busID is 8-2.
 It will be different on your system.
-Make a note of the busID, then do the following in the same powershell administrator window:
+Make a note of the busID, then do the following in your powershell administrator window:
 
 ```text
 PS C:\Users\robin> usbipd bind --busid 8-2 (or whatever your own system's busID was for the CMSIS-DAP device)
 ```
 
-This is a one-time administrator command to tell Windows that it is allowed to connect that device to WSL at a later point in time.
+The 'bind' operation is a one-time administrator-level operation that tells Windows that it is allowed to share the device with WSL from now on.
 
-When it is actually time to connect a debugger, you will need to open a non-adminstrator powershell window and type the 'list' and 'attach' commands as shown below:
+You can now close the powershell administrator window and open just a regular powershell window inside your terminal app.
+
+To connect the debugger to WSL, use the regular powershell window to type the 'list' and 'attach' commands as shown below:
 
 ```text
 PS C:\Users\robin> usbipd list
@@ -895,31 +845,22 @@ GUID                                  DEVICE
 PS C:\Users\robin>usbipd attach --wsl --busid 8-2
 ```
 
-The busID can change if you reboot your system, so you need to do the list command before attaching.
-You will need to run the 'attach' command (above) to reattach the debugger to WSL if you ever unplug it or if it loses power or the system reboots, etc.
-It's a bit annoying to have to keep reconnecting the USB dongles each time you restart WSL, but that's life.
-But at least WSL can access USB devices now!
-
-### Preparing to Launch
-
-The "launch.json" file needs to know where to find the Pico SDK so that it can access the RP2040 chip's peripheral register definitions.
-Put this definition in your .bash_rc:
-
-```bash
-export PICO_SDK_PATH=/home/<your-user-name>/projects/pico-sdk/<version-you-are-using>
-```
-
-That last definition assumes that you used all the defaults and didn't put 'projects' somewhere else, or with a different name, and that you put some specific version of the SDK under 'projects/pico-sdk' as suggested.
+At this point, Windows will have given control of the debugger to WSL.
+If you reboot your machine, or if you unplug the debugger and plug it back in, you will need to repeat the powershell 'list' and 'attach' commands to give control back to WSL.
+The busID can change on reboot, so pay attention to what 'list' tells you!
 
 ### Starting the Debugger
 
 [todo: discuss edits to launch.json]
 
-type "F1", then "Debug: Select And Start Debugging".
-That will bring up a window of all the launch configurations as menu choices.
-Click Launch CMSIS-DAP selection for the processor you are using: RP2040 for Pico/PicoW, or RP2350 for Pico2/Pico2W.
+In VS Code, click the debug icon on the left side ribbon (the triangle with the ladybug beside it).
+At the top of the windowpane that appeared, there is a pulldown menu labeled "Run And Debug".
+Click the downarrow in the box to make a menu list of launch commands appear.
+Click the "Launch CMSIS-DAP..." selection that matches the processor you are using: RP2040 if your board is a Pico/PicoW, or RP2350 if your board is a Pico2/Pico2W.
 
-And if everything goes OK, you should see something like this:
+Then, either push F5 or click the green triangle beside your launch menu item you just selected.
+
+If everything goes OK, you should see something like this:
 
 ![image](doc/images/debugger-in-main.jpg)
 
@@ -928,11 +869,51 @@ The debugger has stopped execution at the first line of main() (that's why it is
 
 Congratulations if you made it this far.
 
-Hit 'F5' to start the code running. Or 'F10' to step over single lines of code.
+At this point, you can run your code by pushing F5.
+Other commands like 'F10' will step over a single line of code.
+F11 will step single lines of code except that it steps into the functions that it executes.
+You can look at the current state of all your global or local variables.
+You can set or remove breakpoints.
+There is a little floating toolbar that appeared which controls basic debugger operation, circled in red in the example image, above.
+Clicking the far left button in the toolbar resets the processor.
+Clicking the far right button in the toolbar exits the debugger.
 
-As far as the development cycle goes, you can now forget about 99% of what came before.
-To make a change to the source, exit the debugger, and make the change.
-Hit 'F7' to rebuild your code.
-Hit 'F5' to flash it onto your board.
-Hit 'F5' again to make it run.
-Set breakpoints, examine variables, ponder things and repeat, until happy.
+As far as the development cycle goes, you can now forget about 99.9% of everything that came before in this document.
+From now on, your development cycle looks like this:
+
+* To make a change to the source, exit the debugger, and make the change.
+* Hit 'F7' to rebuild your code.
+* Hit 'F5' to flash it onto your board.
+* Hit 'F5' again to make it run.
+* Set breakpoints, examine variables, ponder things and repeat, until happy.
+
+That's all you need to know for the development cycle: F7 builds, F5 runs.
+
+### RTT IO
+
+The project software is set up to send IO from the code running on the ARM to the debugger window.
+This allows for your code to produce debug logs or status messages etc.
+It uses the Segger RTT mechanism (Real Time Transfer).
+The jist of it all is that printf() on the ARM writes its data to a RAM buffer.
+The debugger application on the host periodically checks for data appearing in the RAM buffer.
+These checks occur via the silicon-based debug unit inside the ARM chip meaning that they do not perturb operation of the ARM chip.
+When the application sees output data (for example), it uses the debug silicon to extract the data and send it up the debug communication channel.
+From there, it prints the data inside a terminal window in the debugger.
+To see this in action, start the debugger and get stopped at main():
+
+* Look in the debugger window for the tab titled "Terminal". Click it.
+* Over to the right, you will see a sub-window appear with an entry marked "RTT Ch:0 console". Click it.
+* Hit 'F5' to start the program running
+
+You will see "Hello, World" appear in the Terminal window, along with other messages.
+That is the printf IO coming out of the ARM chip.
+
+If no debugger is connected, the printf mechanisms still print to the circular buffer like normal, but the outout goes nowhere and the buffer contents get overwritten. The important part is that the timing does not change just because no one is listening to the output.
+
+## Next Steps
+
+This project can be used as the basis for anything you want to do.
+Just make a copy of this project in your ~/projects directory and start making changes.
+If you don't want the RTOS, it is trivial to remove.
+In truth, you don't even need to remove anything: just don't include the header files, and don't call the routine to init the scheduler.
+Your project will be whatever you ask main() to do.
