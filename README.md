@@ -821,12 +821,12 @@ It will be different on your system.
 Make a note of the busID, then do the following in your powershell administrator window:
 
 ```text
-PS C:\Users\robin> usbipd bind --busid 8-2 (or whatever your own system's busID was for the CMSIS-DAP device)
+usbipd bind --busid 8-2
 ```
 
 The 'bind' operation is a one-time administrator-level operation that tells Windows that it is allowed to share the device with WSL from now on.
 
-You can now close the powershell administrator window and open just a regular powershell window inside your terminal app.
+You can now close the powershell administrator window and open a regular (non-administrator) powershell window as one of the tabs inside your terminal app.
 
 To connect the debugger to WSL, use the regular powershell window to type the 'list' and 'attach' commands as shown below:
 
@@ -850,6 +850,21 @@ If you reboot your machine, or if you unplug the debugger and plug it back in, y
 The busID can change on reboot, so pay attention to what 'list' tells you!
 
 ### Starting the Debugger
+
+At this point, VS Code should be open, editing the directory "projects/ptwd".
+
+* Hit F1, then select "delete cache and reconfigure".
+* Hit F1, then select "rebuild clean".
+
+There should be no errors from either step at this point.
+
+Your debug unit should be attached to WSL.
+
+Now it is time to connect the hardware!
+You need some kind of Pico board attached to your development machine with a USB cable.
+The USB cable will supply power to the Pico.
+The debugger should also be plugged into the development PC via USB, and then attached to WSL as described [earlier](#getting-wsl-to-see-a-debug-probe).
+
 
 [todo: discuss edits to launch.json]
 
