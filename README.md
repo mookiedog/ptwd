@@ -241,7 +241,7 @@ echo $PATH|tr ':' '\n'|grep '[.]local'
 /home/<your-user-name>/.local/bin
 ```
 
-If your .profile is not adding "~/.local/bin" to your path, edit your '~/.profile' to add the following lines:
+If your .profile is not adding "\~/.local/bin" to your path, edit your '\~/.profile' to add the following lines:
 
 ```bash
 # set PATH so it includes user's private bin if it exists
