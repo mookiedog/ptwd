@@ -227,7 +227,7 @@ If that directory does not exist, use your terminal window to create it via the 
 mkdir -p ~/.local/bin
 ```
 
-The standard Ubuntu "~/.profile" you got with your fresh distro will automatically add your new "~/.local/bin" directory to the PATH variable.
+The standard Ubuntu "\~/.profile" you got with your fresh distro will automatically add your new "\~/.local/bin" directory to the PATH variable.
 You will either need to close your terminal window and open a new one, or you can just re-run your .bashrc via:
 
 ```bash
@@ -853,12 +853,10 @@ The busID can change on reboot, so pay attention to what 'list' tells you!
 
 At this point, VS Code should be open, editing the directory "projects/ptwd".
 
-* Hit F1, then select "delete cache and reconfigure".
-* Hit F1, then select "rebuild clean".
+* Hit F1, then select "Delete Cache and Reconfigure"
+* Hit F1, then select "Clean Rebuild"
 
 There should be no errors from either step at this point.
-
-Your debug unit should be attached to WSL.
 
 Now it is time to connect the hardware!
 You need some kind of Pico board attached to your development machine with a USB cable.

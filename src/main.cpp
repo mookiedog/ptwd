@@ -79,9 +79,25 @@ void pico_set_led(bool led_on)
     #endif
 }
 
+// --------------------------------------------------------------------------------------------
+// Fast flash the LED 3 times as a most basic sign of life as we boot.
+void hello()
+{
+    int32_t rval = pico_led_init();
+    hard_assert(rval == PICO_OK);
+
+    for (uint32_t i=0; i<3; i++) {
+        pico_set_led(true);
+        sleep_ms(10);
+        pico_set_led(false);
+        sleep_ms(50);
+    }
+}
+
 
 // --------------------------------------------------------------------------------------------
 // All temp sensors get read once per second.
+// New temperatures only get displayed if they have changed since the last time they were measured.
 void vTempSensorTask(void* arg)
 {
     uint64_t deviceAddr[MAX_SENSOR_COUNT];
@@ -171,8 +187,9 @@ void vTempSensorTask(void* arg)
             for (uint32_t i=0; i<EXPECTED_SENSOR_COUNT; i++) {
                 if (sensors[i].curr_temp_C != sensors[i].prev_temp_C) {
                     // The temperature has changed: we need to display it
-                    printf("%s: Sensor %d temp is %.1fC [%.1fF], raw:%04X\n",
+                    printf("%s[%d]: Sensor %d temp is %.1fC [%.1fF], raw:%04X\n",
                            __FUNCTION__,
+                           get_core_num(),
                            i,
                            sensors[i].curr_temp_C,
                            ((sensors[i].curr_temp_C * 9.0f)/5.0f)+32.0f,
@@ -205,16 +222,15 @@ void bootSystem()
     }
 }
 
+// --------------------------------------------------------------------------------------------
 void vBlink(void* arg)
 {
     // The blink task must boot the rest of the tasks before doing its real job
     bootSystem();
 
-    int32_t rval = pico_led_init();
-    hard_assert(rval == PICO_OK);
-
     // Blink the board's built-in LED forever, 10% duty cycle
     while (1) {
+        //printf("%s[%d]\n", __FUNCTION__, get_core_num());
         pico_set_led(true);
         vTaskDelay(pdMS_TO_TICKS(100));
         pico_set_led(false);
@@ -225,6 +241,8 @@ void vBlink(void* arg)
 // --------------------------------------------------------------------------------------------
 int main()
 {
+    hello();
+
     stdio_init_all();
 
     // Demonstrate that we have printf sends output to the debugger terminal window
