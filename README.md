@@ -543,10 +543,10 @@ git submodule update --init
 ```
 
 Finally, we need to create an environment variable used by various parts of the build system to explain where to find the version of SDK they should be using:
-Execute the following line to add the environment variable to your ~/.bashrc file:
+Before executing the following line, make sure to edit it to put in your own user name:
 
 ```bash
-echo "PICO_SDK_PATH=/home/<user-name>/projects/pico-sdk/2.1.1" >> ~/.bashrc
+echo "export PICO_SDK_PATH=/home/<user-name>/projects/pico-sdk/2.1.1" >> ~/.bashrc
 ```
 
 Either close the terminal and reopen it, or execute ". ~/.bashrc" to make sure that the variable is defined in your current shell.
