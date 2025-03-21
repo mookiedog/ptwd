@@ -543,7 +543,7 @@ git submodule update --init
 ```
 
 Finally, we need to create an environment variable used by various parts of the build system to explain where to find the version of SDK they should be using:
-Before executing the following line, make sure to edit it to put in your own user name:
+__Before executing the following line, make sure to edit it to put in your own user name:__
 
 ```bash
 echo "export PICO_SDK_PATH=/home/<user-name>/projects/pico-sdk/2.1.1" >> ~/.bashrc
@@ -618,12 +618,14 @@ projects
 
 ## Using VS Code in Remote Mode
 
+_This section only applies to using Code with WSL. If your machine is a pure linux machine, then just start Code and ignore the whole remote aspect._
+
 Start VS code running.
 You can start it from Windows by typing its name in the seach box 'code'.
 You can start it from any terminal window running linux by typing 'code&'.
 
 If you start it from Windows, you will need to open a remote connection to access the linux machine.
-If you start it from Linux, it actually starts it in Windows, then automatically opens a remote connection back to linux anyway.
+If you start it from Linux in WSL, it actually starts it in Windows, then automatically opens a remote connection back to linux anyway.
 There is no advantage to doing it one way or the other.
 
 If you start VS code from Windows, you need to click the little green box in the lower left corner with two >< characters in it.
@@ -631,14 +633,20 @@ Select the 'Connect to WSL' option.
 
 If this is your first time running Code that was installed under Windows but is connecting to a WSL distro, then you need to reinstall a couple of VS Code extensions so that they operate properly as linux apps when using the linux remote connection.
 
+## VS CodeExtensions
+
+Make sure that the following extensions are installed:
+
 * C/C++ (by Microsoft)
 * C/C++ Extension pack (by Microsoft)
+  * Installing this extension may open a popup asking you to specify a toolkit. If so, select 'unspecified'.
 * Cortex Debugger (By Marus25)
 
 ## Building the Project
 
 We are finally ready to build the project.
-Use VS Code to open the directory containing the ptwd project.
+Use VS Code file/OpenFolder to open the directory containing the ptwd project (~/projects/ptwd).
+
 The first step is to set the project up for the Pico board that you want to use.
 
 Click on the file 'CMakeLists.txt' to open it for editing.
@@ -648,7 +656,11 @@ If you are using a different pico board, change pico2 to the board you want to u
 
 To configure CMake, hit 'F1' then type 'delete', but don't hit return.
 A bunch of selections related to the topic of 'deleting' will appear in a dropdown list.
-Click the list item called 'CMake: Delete Cache and Reconfigure'.
+Click the list item called '__CMake: Delete Cache and Reconfigure__'.
+
+If a window pops up asking you to specify a toolkit, select 'unspecified'.
+The project will set up the toolkit by itself.
+
 After some amount of time, that operation should finish without errors.
 It should produce a bunch of messages in the VS Code 'output' window that looks something like this:
 
@@ -797,12 +809,9 @@ You need some kind of Pico board attached to your development machine with a USB
 The USB cable will supply power to the Pico.
 The debugger should also be plugged into the development PC via USB, and then attached to WSL as described [earlier](#getting-wsl-to-see-a-debug-probe).
 
-
-[todo: discuss edits to launch.json]
-
 In VS Code, click the debug icon on the left side ribbon (the triangle with the ladybug beside it).
 At the top of the windowpane that appeared, there is a pulldown menu labeled "Run And Debug".
-Click the downarrow in the box to make a menu list of launch commands appear.
+Click the down-arrow in the box to make a menu list of launch commands appear.
 Click the "Launch CMSIS-DAP..." selection that matches the processor you are using: RP2040 if your board is a Pico/PicoW, or RP2350 if your board is a Pico2/Pico2W.
 
 Then, either push F5 or click the green triangle beside your launch menu item you just selected.
