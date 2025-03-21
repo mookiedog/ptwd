@@ -47,7 +47,6 @@ If you choose to build the system on a pure Linux machine instead of Windows/WSL
   * [Download ARM Tools](#downloading-arm-tools-for-x86-pc)
   * [Test GDB for ARM](#test-gdb-for-arm) (GNU debugger)
   * [OpenOCD](#install-openocd), Interfaces GDB to on-chip debugging silicon
-  * [Ninja](#ninja), used by CMake to drive the actual build process
 * [Prepare a 'projects' directory in Linux](#project-development-setup)
   * Install this project from github
   * Install Pi Pico software
@@ -228,10 +227,10 @@ mkdir -p ~/.local/bin
 ```
 
 The standard Ubuntu "\~/.profile" you got with your fresh distro will automatically add your new "\~/.local/bin" directory to the PATH variable.
-You will either need to close your terminal window and open a new one, or you can just re-run your .bashrc via:
+You will either need to close your terminal window and open a new one, or you can just re-run your .profile via:
 
 ```bash
-. ~/.bashrc
+. ~/.profile
 ```
 
 Check your PATH to verify that "~/.local/bin" directory is on it now:
@@ -259,7 +258,7 @@ It is possible that they are already installed in the fresh WSL distro, but it i
 Install them as below:
 
 ```bash
-sudo apt install gcc g++ git unzip cmake
+sudo apt install gcc g++ git unzip cmake ninja-build libncurses5 libncursesw5
 ```
 
 The gcc and g++ compilers installed above generate code for your Linux host machine, not the ARM chips on the Pico boards. The Pico SDK expects to find the host g++ compiler using an environment variable called 'CXX'.
@@ -267,6 +266,12 @@ Run the following command to add the appropriate CXX definition to your .bashrc 
 
 ```bash
 echo "export CXX=/usr/bin/g++" >> ~/.bashrc
+```
+
+Remember to re-run your .bashrc so that the change you just made takes effect:
+
+```bash
+. ~/.bashrc
 ```
 
 #### Git and Line Endings
@@ -383,13 +388,21 @@ Once tar completes, the cross-compilation executable tools will be located at /o
 Verify that the new tools are functioning by running gcc directly from its bin directory:
 
 ```bash
-    $ ./bin/arm-none-eabi-gcc --version
-    arm-none-eabi-gcc (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119
-    Copyright (C) 2024 Free Software Foundation, Inc.
+$ ./bin/arm-none-eabi-gcc --version
+arm-none-eabi-gcc (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 14.2.1 20241119
+Copyright (C) 2024 Free Software Foundation, Inc.
 ```
 
 Do __not__ add the cross-compiler's bin directory to your PATH variable.
 We will be using CMake's 'toolchain' mechanism to tell the build system how to find the ARM tools so they do not need to go on your PATH.
+
+Verify that GDB runs, too:
+
+```bash
+$ ./bin/arm-none-eabi-gdb --version
+GNU gdb (Arm GNU Toolchain 14.2.Rel1 (Build arm-14.52)) 15.2.90.20241130-git
+Copyright (C) 2024 Free Software Foundation, Inc.
+```
 
 #### Updates When Installing a New Version of ARM tools
 
@@ -400,48 +413,6 @@ For the project we will be installing later, the toolchain file will be located 
 If you were to install new ARM tools, you could change your toolchain file to use them by editing the 'arm-none-eabi.cmake' file to point at the new tools.
 
 If the version number of the tools has changed for you, edit the toolchain file to reflect your new version number and save it.
-
-### Test GDB For ARM
-
-GDB is the Gnu Debugger.
-A version of GDB that targets the RP2xxx ARM processors was included with the ARM tools that were just installed, above.
-
-Start off by trying to execute the new cross-tool GDB as follows. You may or may not see an error, as shown below:
-
-```bash
-$ cd /opt/arm/arm-none-eabi/14.2.rel1/bin
-$ ./arm-none-eabi-gdb  --version
-./arm-none-eabi-gdb: error while loading shared libraries: libncursesw.so.5: cannot open shared object file: No such file or directory
-```
-
-If you don't see an error, you are good to go and can skip the next section on GDB and Ncurses and go directly to [installing OpenOCD](#install-openocd).
-
-#### GDB and Missing Ncurses
-
-FYI, the 'w' version of libncurses (i.e. ''libncursesw.so.5') is the same as libncurses except that it can deal with 'wide' characters, meaning the UTF-8 charset.
-
-If you do see an error when running GDB about a missing "libncursesw", you will need to do the following steps, below. If not, skip to the next section.
-
-```bash
-sudo apt-get install libncurses5 libncursesw5
-```
-
-When using WSL, the libraries get installed in '/usr/lib/x86_64-linux-gnu', not the standard linux location '/usr/lib'.
-WSL users will need to add '/usr/lib/x86_64-linux-gnu' to their PATH variable.
-It is easiest to modify your .bashrc file to add the following line:
-
-```bash
-export PATH=$PATH:/usr/lib/x86_64-linux-gnu
-```
-
-Now, GDB should run and produce some version information in this general form:
-
-```bash
-$ cd /opt/arm/arm-none-eabi/14.2.rel1/bin
-$ ./arm-none-eabi-gdb --version
-GNU gdb (Arm GNU Toolchain 14.2.rel1 (Build arm-13.24)) 14.2.90.20240526-git
-Copyright (C) 2023 Free Software Foundation, Inc.
-```
 
 ### Install OpenOCD
 
@@ -459,13 +430,7 @@ cd ~/projects
 git clone https://github.com/raspberrypi/openocd.git
 ```
 
-On my system, I needed to install the developer version of ncurses-5:
-
-```bash
-sudo apt install libncurses5-dev libncursesw5-dev
-```
-
-I also needed to install a bunch of packages that OpenOCD will need:
+You will need to install a bunch of packages for building OpenOCD:
 
 ```bash
 sudo apt install libusb-1.0-0 libusb-1.0-0-dev libhidapi-dev libtool texinfo pkg-config make
@@ -487,7 +452,7 @@ We need to give ourselves permission to access the USB debug probe so that we do
 For that, we create another rules file as follows:
 
 ```bash
-sudo printf '# Pi Pico CMSIS-DAP USB debug probe\nATTRS{idProduct}=="000c", ATTRS{idVendor}=="2e8a", MODE="666", GROUP="plugdev"\n' >> /etc/udev/rules.d/46-probe.rules
+sudo sh -c 'printf "# Pi Pico CMSIS-DAP USB debug probe\nATTRS{idProduct}==\"000c\", ATTRS{idVendor}==\"2e8a\", MODE=\"666\", GROUP=\"plugdev\"\n" >> /etc/udev/rules.d/46-probe.rules'
 ```
 
 Finally, we trigger reloading the new rules file we just created:
@@ -498,37 +463,6 @@ sudo udevadm trigger
 ```
 
 From now on, the rules will be reapplied every time WSL starts.
-
-### Ninja
-
-'Ninja' is the low-level build generator tool used by VS Code and CMake to decide what source files are out of date and need to be rebuilt when rebuilding a project.
-It operates much like the standard linux 'make' or 'gmake' except that it is specifically designed to be very lightweight.
-As a result, it can run much faster than traditional 'make' tools.
-Ninja is not installable in the normal 'apt install ...' fashion.
-Instead, it comes as a zip file containing a single binary executable that needs to be stored somewhere.
-In this case, we will store ninja in our ~/.local/bin directory that was created earlier in this document.
-
-Use a browser to get to the ninja [download page](https://github.com/ninja-build/ninja/releases)
-The download file '**ninja-linux.zip**' contains the x86 ninja executable for linux.
-If you are not on an x86 host, find the appropriate executable.
-Instead of downloading the file, right click its name and select "copy link".
-In your Linux terminal window, do the following commands. After you type the 'wget' in the commands below, use shift-insert or ctrl-V to paste the link that you copied from the download page.
-
-```bash
-cd ~/.local/bin
-wget https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux.zip
-unzip ninja-linux.zip
-chmod +x ninja
-```
-
-Verify that ninja is working.
-Your version number may differ:
-
-```bash
-$ cd ~
-$ ninja --version
-1.12.1
-```
 
 ## Project Development Setup
 
