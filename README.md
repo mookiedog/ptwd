@@ -258,7 +258,7 @@ It is possible that they are already installed in the fresh WSL distro, but it i
 Install them as below:
 
 ```bash
-sudo apt install gcc g++ git unzip cmake ninja-build libncurses5 libncursesw5
+sudo apt install gcc g++ git unzip cmake ninja-build libncurses5-dev libncursesw5-dev
 ```
 
 The gcc and g++ compilers installed above generate code for your Linux host machine, not the ARM chips on the Pico boards. The Pico SDK expects to find the host g++ compiler using an environment variable called 'CXX'.
