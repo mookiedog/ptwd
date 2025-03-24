@@ -44,6 +44,11 @@ set(CMAKE_TOOLCHAIN_FILE ${PICO_ARM_TOOLCHAIN_PATH})
 # Can be any of [pico, pico_w, pico2, pico2_w]:
 set(PICO_BOARD pico2)
 
+# Uncommenting this next line will allow RP2040 chips to run at 200 MHz now instead of 125/133 MHz.
+# There is a proportionate increase in power consumption, if that matters to your project.
+# As of 3/2025 the fastest an RP2350 will officially run is still 150 MHz.
+#set(PICO_USE_FASTEST_SUPPORTED_CLOCK 1)
+
 # Based on the board definition, define the appropriate platform and cpu:
 if (${PICO_BOARD} STREQUAL "pico")
   set(PICO_PLATFORM rp2040)

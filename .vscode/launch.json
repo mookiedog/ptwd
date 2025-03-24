@@ -27,7 +27,7 @@
             "interface/cmsis-dap.cfg",
             "target/rp2040.cfg"
         ],
-        "svdFile": "/home/robin/projects/pico-sdk/2.0.0/src/rp2350/hardware_regs/RP2040.svd",
+        "svdFile": "/home/robin/projects/pico-sdk/2.0.0/src/rp2040/hardware_regs/RP2040.svd",
         "runToEntryPoint": "main",
         // Work around for stopping at main on restart
         "postRestartCommands": [

@@ -43,19 +43,18 @@ If you choose to build the system on a pure Linux machine instead of Windows/WSL
 * [Install VS Code](#vs-code)
   * Install a bunch of VS Code extensions
 * [Install Linux software](#linuxwsl2-software-installation)
-  * [Host Tools](#install-host-tools)
+  * [Host Tools](#install-linux-host-tools)
   * [Download ARM Tools](#downloading-arm-tools-for-x86-pc)
-  * [Test GDB for ARM](#test-gdb-for-arm) (GNU debugger)
   * [OpenOCD](#install-openocd), Interfaces GDB to on-chip debugging silicon
 * [Prepare a 'projects' directory in Linux](#project-development-setup)
-  * Install this project from github
   * Install Pi Pico software
-    * Raspberry Pi Pico-SDK
-    * FreeRTOS for Pi Pico
+    * [Raspberry Pi Pico-SDK](#rpi-sdk)
+    * [Picotool](#picotool)
+  * Install this project from github
 
 Once all the software is successfully installed, you will be able to use VS Code to:
 
-* Configure your build
+* Configure the project build
 * Build the project software
 * Use a hardware debugger to flash the code onto a Pico board
 
@@ -249,9 +248,9 @@ if [ -d "$HOME/.local/bin" ] ; then
 fi
 ```
 
-If you had to edit your .profile, verify that "~/.local/bin" is on your path before continuing.
+Log out and log in again (or type 'source ~/.profile'), and verify that '~/.local.bin' is on your PATH.
 
-### Install Host Tools
+### Install Linux Host Tools
 
 A number of tools that need to run on the host machine need to be installed.
 It is possible that they are already installed in the fresh WSL distro, but it is harmless to ask to reinstall them.
